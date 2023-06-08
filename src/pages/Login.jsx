@@ -1,8 +1,28 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import logoImage from "../assets/images/lws-logo-light.svg";
 import Error from "../components/ui/Error";
+import { useEffect, useState } from "react";
+import { useLoginMutation } from "../features/auth/authapi";
 
 const Login = () => {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  
+  const [login, {data, isLoading, isError, error:errorMassage}] = useLoginMutation()
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (errorMassage?.data) {
+      setError(errorMassage.data)
+    }
+    if (data?.accessToken && data.user) {
+      navigate("/inbox")
+    }
+  },[data, errorMassage,navigate])
+  const handleLogin = (e) => {
+    e.preventDefault()
+    login({ email, password })
+  }
   return (
     <>
       <div className="grid place-items-center h-screen bg-[#F9FAFB">
@@ -20,7 +40,7 @@ const Login = () => {
                 Sign in to your account
               </h2>
             </div>
-            <form className="mt-8 space-y-6" action="#" method="POST">
+            <form className="mt-8 space-y-6" onSubmit={handleLogin}>
               <input type="hidden" name="remember" value="true" />
               <div className="rounded-md shadow-sm -space-y-px">
                 <div>
@@ -32,6 +52,8 @@ const Login = () => {
                     name="email"
                     type="email"
                     autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                     className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-violet-500 focus:border-violet-500 focus:z-10 sm:text-sm"
                     placeholder="Email address"
@@ -46,6 +68,8 @@ const Login = () => {
                     name="password"
                     type="password"
                     autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
                     className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-violet-500 focus:border-violet-500 focus:z-10 sm:text-sm"
                     placeholder="Password"
@@ -67,13 +91,14 @@ const Login = () => {
               <div>
                 <button
                   type="submit"
+                  disabled={isLoading}
                   className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500"
                 >
                   Sign in
                 </button>
               </div>
 
-              <Error message="There was an error" />
+              {isError && <Error message={ error} />}
             </form>
           </div>
         </div>

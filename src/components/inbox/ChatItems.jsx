@@ -1,23 +1,56 @@
+import { useDispatch, useSelector } from "react-redux";
+import { useGetConversationsQuery } from "../../features/Conversations/ConversationsApi";
+import ChatItem from "./ChatItem";
+import Error from "../ui/Error";
+import getPartnerInfo from "../../pages/utilitis/getPartnerInfo";
+import gravatarUrl from 'gravatar-url';
+import moment from 'moment'
 import { Link } from "react-router-dom";
+import { userLoggedOut } from "../../features/auth/authSlice";
 
-export default function ChatItem({ avatar, name, lastMessage, lastTime }) {
-  return (
-    <Link
-      className="flex items-center px-3 py-2 text-sm transition duration-150 ease-in-out border-b border-gray-300 cursor-pointer hover:bg-gray-100 focus:outline-none"
-      to="/"
-    >
-      <img
-        className="object-cover w-10 h-10 rounded-full"
-        src={avatar}
-        alt={name}
-      />
-      <div className="w-full pb-2 hidden md:block">
-        <div className="flex justify-between">
-          <span className="block ml-2 font-semibold text-gray-600">{name}</span>
-          <span className="block ml-2 text-sm text-gray-600">{lastTime}</span>
-        </div>
-        <span className="block ml-2 text-sm text-gray-600">{lastMessage}</span>
-      </div>
-    </Link>
-  );
+export default function ChatItems() {
+  const dispatch = useDispatch();
+  const email = useSelector((state) => state?.auth?.user?.email) || {};
+  const {
+    data: conversations,
+    isLoading,
+    isError,
+    error,
+  } = useGetConversationsQuery(email);
+
+  if (error?.data === "jwt expired") {
+    dispatch(userLoggedOut());
+  }
+  let content = null;
+
+  if (isLoading) {
+    content = <li className="m-2">Loading...</li>;
+  } else if (!isLoading && isError) {
+    content = (
+      <li>
+        <Error message={error?.data}></Error>
+      </li>
+    );
+  } else if (!isLoading && !isError && conversations?.length === 0) {
+    content = <li>No Conversations found!</li>;
+  } else if (!isLoading && !isError && conversations?.length > 0) {
+    content = conversations.map((conversation) => {
+      const { id, message, timestamp } = conversation;
+      const partner = getPartnerInfo(conversation.users, email)
+      return (
+        <li key={id}>
+          <Link to={`/inbox/${id}`}>
+            <ChatItem
+              avatar={gravatarUrl(partner?.email)}
+              name={partner.name}
+              lastMessage={message}
+              lastTime={moment(timestamp).fromNow()}
+            />
+          </Link>
+        </li>
+      );
+    });
+  }
+
+  return <ul>{content}</ul>;
 }
